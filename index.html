@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>OBTP Push</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+    <link rel="icon" type="image/png" href="favicon.ico" />
+    <link type="image/x-icon" rel="shortcut icon" href="favicon.ico" />
+    <link rel="stylesheet" href="fonts.css">
+</head>
+
+<body>
+    <script>
+        document.addEventListener("DOMContentLoaded", (event) => {
+            const randomString = Math.random().toString(36).substring(2, 7);
+            const client_id = "C8f5b92feccbead4fe2bb6dcc56085c19a74535bd061a6a330dd736a57b6a96f6"
+            const redirect_uri = encodeURIComponent(window.location.origin + "/auth")
+
+            let loginUrl = `https://webexapis.com/v1/authorize?client_id=${client_id}&response_type=token&redirect_uri=${redirect_uri}&scope=spark%3Akms%20spark-admin%3Adevices_read%20spark%3Apeople_read%20identity%3Atokens_write%20spark%3Axapi_statuses%20identity%3Atokens_read%20spark%3Adevices_read%20spark%3Axapi_commands&prompt=select_account%20consent&state=${randomString}`
+            document.getElementById("login").href = loginUrl        
+            console.log(loginUrl)
+        })
+    </script>
+
+    <div class="card mt-5 w-25 mx-auto border border-primary">
+        <div class="card-body">
+            <h5 class="card-title">Please login to Control Hub</h5>
+            <p class="card-text">(You must be a device administrator)</p>
+            <a id="login" href="" class="btn btn-primary">Login</a>
+        </div>
+    </div>
+
+</body>
+
+</html>

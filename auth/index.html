@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous" />
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
+        crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/umbrellajs"></script>
+    <link rel="stylesheet" href="../fonts.css" />
+    <style>
+        .teams-btn {
+            background-color: #6610f2;
+            color: #fff;
+        }
+
+        .teams-text {
+            color: #6610f2 !important;
+        }
+    </style>
+</head>
+
+<body>
+    <script>
+        const params = new URLSearchParams(window.location.hash.slice(1));
+        if (params.has("access_token")) {
+            const headers = {
+                Authorization: `Bearer ${params.get("access_token")}`,
+            };
+            document.addEventListener("DOMContentLoaded", (event) => {
+                u('#devices').on("change", () => getMTG())
+                u('#btn_refresh').on("click", () => getMTG())
+                u("#btn_sip").on("click", () => pushMTG("sip"))
+                u("#btn_teams").on("click", () => pushMTG("teams"))
+                u("#btn_webex").on("click", () => pushMTG("webex"))
+                u("#btn_link").on("click", () => pushMTG("link"))
+
+                axios
+                    .get("https://webexapis.com/v1/people/me", { headers })
+                    .then((response) => {
+                        u('#userName').text(response.data.userName)
+                    })
+                    .catch((error) => {
+                        console.log(error);
+                        window.location.replace(window.location.origin);
+                    });
+
+                axios
+                    .get("https://webexapis.com/v1/devices/?type=roomdesk", { headers })
+                    .then((response) => {
+                        response.data.items.forEach((element) => {
+                            const opt = `${element.displayName} - (${element.product})`;
+                            document
+                                .getElementById("devices")
+                                .add(new Option(opt, element.id));
+                            if (element.connectionStatus == "disconnected") {
+                                document
+                                    .getElementById("devices")
+                                    .lastChild.setAttribute("disabled", "disabled");
+                            }
+                        });
+                    })
+                    .catch((error) => {
+                        console.log(error);
+                    });
+            });
+
+            function updateTable(BookList){
+                u("#bookList").empty()
+                if (BookList.length) {
+                    BookList.forEach(booking => {
+                        let t_row = {
+                            Organizer: booking.Organizer.Name,
+                            Title : booking.Title,
+                            Data : new Date(booking.Time.StartTime).toLocaleString()
+                        }
+                        switch (booking.MeetingPlatform){
+                            case "Webex":
+                                t_row.tip = "webex"
+                                t_row.color = "text-success"
+                                t_row.Number = booking.Number.slice(0, -10)
+                                break
+                            case "MicrosoftTeams":
+                                t_row.tip = "teams"
+                                t_row.color = "teams-text"
+                                if (booking.Number.length > 99) { t_row.Number = "Teams w/ Link" }
+                                else {t_row.Number = booking.Number.split("?")[0].slice(33)}
+                                break
+                            case "Other":
+                                t_row.tip = "cisco"
+                                t_row.color = "text-primary"
+                                t_row.Number = booking.Number    
+                        }
+                        u("#bookList").append(`<tr><td><img src="${t_row.tip}.png"></td><td class = "${t_row.color}">${t_row.Title}</td><td>${t_row.Number}</td><td>${t_row.Organizer}</td><td>${t_row.Data}</td></tr>`)
+                    })}
+            }
+            function clearOBTP() {
+                const deviceId = u("#devices").first().value;
+                u("#bookList").empty()
+                axios
+                    .post(
+                        "https://webexapis.com/v1/xapi/command/Bookings.Clear",
+                        { deviceId, arguments: {} },
+                        { headers }
+                    )
+                    .catch((error) => console.error(error));
+            }
+            async function pushOBTP(tip){
+
+                try {
+                    const deviceId = u("#devices").first().value;
+                    const data_list = { deviceId, arguments: { DayOffset: 0}}
+
+                    const bookingList = await axios.post("https://webexapis.com/v1/xapi/command/Bookings.List", data_list,{ headers })
+                    let allBookings = []
+
+                    if (bookingList.data.result.ResultInfo.TotalRows) {
+                    allBookings = await Promise.all(
+                        bookingList.data.result.Booking.map(async item => {
+                            try {
+                                const get_res = await axios.post("https://webexapis.com/v1/xapi/command/Bookings.Get", { deviceId, arguments: {Id: item.Id}}, {headers})
+                                const booking = get_res.data.result.Booking
+                                return {
+                                    Id: booking.Id,
+                                    Title: booking.Title,
+                                    Number : booking.DialInfo.Calls.Call[0].Number,
+                                    Protocol: booking.DialInfo.Calls.Call[0].Protocol,
+                                    MeetingPlatform : booking.MeetingPlatform,
+                                    Time: {
+                                        StartTime: booking.Time.StartTime,
+                                        Duration: (Date.parse(booking.Time.EndTime) - Date.parse(booking.Time.StartTime)) / 60000,
+                                        StartTimeBuffer: 1800
+                                    },
+                                    Organizer: {
+                                        Name: booking.Organizer.FirstName
+                                    }
+                            }
+                            } catch (error) { console.error(error) }
+                        })
+                    )}
+
+                    const mtg_date = u("#mtg_date").first().value
+                    let Protocol = "", MeetingPlatform = "", Address = "";
+
+                    switch (tip) {
+                        case "sip":
+                            Protocol = "SIP";
+                            MeetingPlatform = "Other";
+                            Address = document.getElementById("sip_address").value;
+                            break;
+                        case "teams":
+                            Protocol = "WebRTC";
+                            MeetingPlatform = "MicrosoftTeams";
+                            Address = `https://teams.microsoft.com/meet/${document.getElementById("teams_mtg_id")
+                                .value.replaceAll(" ", "")}?p=${document.getElementById("teams_mtg_pwd").value}&webjoin=true&dgjPartnerID=CSCO`;
+                            break;
+                        case "webex":
+                            Protocol = "Spark";
+                            MeetingPlatform = "Webex";
+                            Address = `${document.getElementById("webex_mtg_id").value.replaceAll(" ", "")}@webex.com`;
+                            break;
+                        case "link":
+                            Protocol = "WebRTC";
+                            MeetingPlatform = "MicrosoftTeams";
+                            Address = document.getElementById("teams_mtg_link").value.replaceAll(" ", "");
+                            break;
+                    }
+                    const newBook = 
+                    {
+                        Id: (allBookings.length + 1).toString(),
+                        Number: Address,
+                        Organizer: { Name: document.getElementById("organizer").value },
+                        Protocol: Protocol,
+                        MeetingPlatform: MeetingPlatform,
+                        Time: {
+                            Duration: Number(document.getElementById("durata").value),
+                            StartTime: new Date(mtg_date).toISOString(),
+                            StartTimeBuffer: 1800,
+                            },
+                        Title: document.getElementById("titlu").value
+                    }
+                    allBookings.push(newBook)
+                    const data_push = { deviceId, arguments: {}, body: {Bookings: allBookings}}
+                    const put_res = await axios.post("https://webexapis.com/v1/xapi/command/Bookings.Put", data_push, {headers})
+                    updateTable(allBookings)
+                    return put_res
+                } 
+                catch (err){
+                    console.log("Catch", err)
+                }
+            }
+            async function getOBTP(){
+                try {
+                    const deviceId = u("#devices").first().value;
+                    if (!deviceId) { return [] }
+                    const data_list = { deviceId, arguments: { DayOffset: 0}}
+
+                    const bookingList = await axios.post("https://webexapis.com/v1/xapi/command/Bookings.List", data_list,{ headers })
+                    let allBookings = []
+
+                    if (bookingList.data.result.ResultInfo.TotalRows) {
+                    allBookings = await Promise.all(
+                        bookingList.data.result.Booking.map(async item => {
+                            try {
+                                const get_res = await axios.post("https://webexapis.com/v1/xapi/command/Bookings.Get", { deviceId, arguments: {Id: item.Id}}, {headers})
+                                const booking = get_res.data.result.Booking
+                                return {
+                                    Id: booking.Id,
+                                    Title: booking.Title,
+                                    Number : booking.DialInfo.Calls.Call[0].Number,
+                                    Protocol: booking.DialInfo.Calls.Call[0].Protocol,
+                                    MeetingPlatform : booking.MeetingPlatform,
+                                    Time: {
+                                        StartTime: booking.Time.StartTime,
+                                        Duration: (Date.parse(booking.Time.EndTime) - Date.parse(booking.Time.StartTime)) / 60000,
+                                        StartTimeBuffer: 1800
+                                    },
+                                    Organizer: {
+                                        Name: booking.Organizer.FirstName
+                                    }
+                            }
+                            } catch (error) { console.error(error) }
+                        })
+                    )} 
+                    return allBookings
+                } 
+                catch (err){
+                    console.log("Catch", err)
+                }
+            }
+            async function getMTG(){
+                getOBTP().then((result) => updateTable(result))
+            }
+            async function pushMTG(tip){
+                pushOBTP(tip).then((result) => { 
+                    const toastBootstrap = bootstrap.Toast.getOrCreateInstance( document.getElementById("infoToast"));
+                    toastBootstrap.show();
+                 }
+                )
+            }
+        } else {
+            window.location.replace(window.location.origin);
+        }
+ 
+    </script>
+
+    <div class="card mt-5 w-50 mx-auto border border-success">
+        <div class="card-header text-bg-secondary d-flex text-light justify-content-between">
+            <span class="fs-5">OBTP Calendar Push v0.2</span>
+            <span><i class="bi me-2 h4 bi-person-fill-gear"></i><span id="userName">Unknown</span>
+        </div>
+
+        <div class="card-body">
+            <div class="mb-3">
+                <div class="input-group">
+                    <select class="form-select" id="devices">
+                        <option selected value="">Select the device...</option>
+                    </select>
+                    <button class="btn btn-primary" type="button" id="btn_refresh">
+                        <i class="bi bi-arrow-repeat me-2"></i> Refresh 
+                    </button>
+                    <button class="btn btn-danger" type="button" onclick="clearOBTP()">
+                        <i class="bi bi-trash3 me-2"></i> Delete All
+                    </button>
+
+
+                </div>
+            </div>
+
+            <ul class="nav nav-tabs" id="protoTab">
+                <li class="nav-item">
+                    <button class="nav-link active text-primary" data-bs-toggle="tab" data-bs-target="#sip-tab-pane"
+                        type="button">
+                        SIP
+                    </button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link teams-text" data-bs-toggle="tab" data-bs-target="#teams-tab-pane"
+                        type="button">
+                        Teams(ID)
+                    </button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link text-success" data-bs-toggle="tab" data-bs-target="#webex-tab-pane"
+                        type="button">
+                        Webex
+                    </button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link teams-text" data-bs-toggle="tab" data-bs-target="#link-tab-pane"
+                        type="button">
+                        Teams(Link)
+                    </button>
+                </li>
+            </ul>
+
+            <div class="tab-content" id="protoTabContent">
+                <div class="tab-pane fade show active mt-3" id="sip-tab-pane">
+                    <div class="input-group mb-3">
+                        <span class="input-group-text">Adresa/Numar:</span>
+                        <input class="form-control" type="text" id="sip_address" />
+                        <button class="btn btn-primary" type="button" id="btn_sip">
+                            <i class="bi bi-calendar-plus me-2"></i> Add SIP Meeting
+                        </button>
+                    </div>
+                </div>
+                <div class="tab-pane fade mt-3" id="teams-tab-pane">
+                    <div class="input-group mb-3">
+                        <span class="input-group-text">Meeting Id:</span>
+                        <input class="form-control" type="text" id="teams_mtg_id" />
+                        <span class="input-group-text">Password:</span>
+                        <input class="form-control" type="text" id="teams_mtg_pwd" />
+                        <button class="btn teams-btn" type="button" id="btn_teams">
+                            <i class="bi bi-calendar-plus me-2"></i> Add Teams Meeting
+                        </button>
+                    </div>
+                </div>
+                <div class="tab-pane fade mt-3" id="webex-tab-pane">
+                    <div class="input-group mb-3">
+                        <span class="input-group-text">Meeting Nr:</span>
+                        <input class="form-control" type="text" id="webex_mtg_id" />
+                        <button class="btn btn-success" type="button" id="btn_webex">
+                            <i class="bi bi-calendar-plus me-2"></i> Add Webex Meeting
+                        </button>
+                    </div>
+                </div>
+                <div class="tab-pane fade mt-3" id="link-tab-pane">
+                    <div class="mb-3">
+                        <label for="teams_mtg_link" class="form-label">Paste the MS Teams invite here:</label>
+                        <textarea class="form-control" id="teams_mtg_link" rows="5"></textarea>
+                        <button class="btn teams-btn" type="button" id="btn_link">
+                            <i class="bi bi-calendar-plus me-2"></i> Add Teams Meeting
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <div class="input-group mb-3">
+                    <span class="input-group-text">Data/Ora:</span>
+                    <input type="datetime-local" class="form-control" id="mtg_date" />
+                    <span class="input-group-text">Durata:</span>
+                    <select class="form-select" id="durata">
+                        <option value="30">30m</option>
+                        <option selected value="60">1h</option>
+                        <option value="90">1h30m</option>
+                        <option value="120">2h</option>
+                        <option value="180">3h</option>
+                        <option value="240">4h</option>
+                    </select>
+                </div>
+                <div class="input-group mb-3">
+                    <span class="input-group-text">Titlu:</span>
+                    <input class="form-control" type="text" id="titlu" />
+                    <span class="input-group-text">Organizator:</span>
+                    <input class="form-control" type="text" id="organizer" />
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="card mt-5 w-50 mx-auto border border-success">
+        <table class="table table-striped table-hover table-sm">
+            <thead class="table-secondary">
+                <tr>
+                    <th scope="col">*</th>
+                    <th scope="col">Titlu</th>
+                    <th scope="col">Numar</th>
+                    <th scope="col">Organizator</th>
+                    <th scope="col">Data/Ora</th>
+                </tr>
+            </thead>
+            <tbody class="table-group-divider" id="bookList"></tbody>
+        </table>
+    </div>
+    <div class="toast-container position-fixed bottom-0 end-0 p-3">
+        <div id="infoToast" class="toast" data-bs-delay="10000">
+            <div class="toast-header text-bg-success" data-bs-theme="dark">
+                <i class="bi bi-check2-square me-3"></i>
+                <strong class="me-auto">OBTP Push</strong>
+                <button type="button" class="btn-close" data-bs-dismiss="toast"></button>
+            </div>
+            <div class="toast-body" id="toastBody">1 Meeting added succesfully</div>
+        </div>
+    </div>
+</body>
+
+</html>

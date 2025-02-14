@@ -12,21 +12,30 @@
     <link type="image/x-icon" rel="shortcut icon" href="favicon.ico" />
     <link rel="stylesheet" href="fonts.css">
 </head>
+<style>
+    body {
+        background-image: url('auth/background.jpg');
+        background-repeat: no-repeat;
+        background-size: cover;
+        background-attachment: fixed;
+    }
+</style>
 
 <body>
     <script>
         document.addEventListener("DOMContentLoaded", (event) => {
+
             const randomString = Math.random().toString(36).substring(2, 7);
             const client_id = "C8f5b92feccbead4fe2bb6dcc56085c19a74535bd061a6a330dd736a57b6a96f6"
             const redirect_uri = encodeURIComponent(window.location.origin + "/auth")
 
             let loginUrl = `https://webexapis.com/v1/authorize?client_id=${client_id}&response_type=token&redirect_uri=${redirect_uri}&scope=spark%3Akms%20spark-admin%3Adevices_read%20spark%3Apeople_read%20identity%3Atokens_write%20spark%3Axapi_statuses%20identity%3Atokens_read%20spark%3Adevices_read%20spark%3Axapi_commands&prompt=select_account%20consent&state=${randomString}`
             document.getElementById("login").href = loginUrl        
-            console.log(loginUrl)
         })
     </script>
 
-    <div class="card mt-5 w-25 mx-auto border border-dark">
+    <div class="card mt-5 w-25 mx-auto border border-dark text-center">
+        <div class="card-header">OBTP Push v0.2</div>
         <div class="card-body">
             <h5 class="card-title">Please login to Control Hub</h5>
             <p class="card-text">(You must be a device administrator)</p>

@@ -80,15 +80,26 @@
                         console.log(error);
                     });
             });
-
+            function deleteOBTP(e){
+//                alert(e.target.dataset.id)
+                const deviceId = u("#devices").first().value;
+                axios
+                    .post(
+                        "https://webexapis.com/v1/xapi/command/Bookings.Delete",
+                        { deviceId, arguments: { "Id": e.target.dataset.id }},
+                        { headers } 
+                    ).then(getMTG)
+                    .catch((error) => console.error(error));
+            }
             function updateTable(BookList){
                 u("#bookList").empty()
                 if (BookList.length) {
                     BookList.forEach(booking => {
                         let t_row = {
                             Organizer: booking.Organizer.Name,
-                            Title : booking.Title,
-                            Data : new Date(booking.Time.StartTime).toLocaleString()
+                            Title : booking.Title.length >36 ? booking.Title.substring(0,36) + "..." : booking.Title,
+                            Data : new Date(booking.Time.StartTime).toLocaleString(),
+                            Id : booking.Id
                         }
                         switch (booking.MeetingPlatform){
                             case "Webex":
@@ -107,8 +118,12 @@
                                 t_row.color = "text-primary"
                                 t_row.Number = booking.Number    
                         }
-                        u("#bookList").append(`<tr><td><img src="${t_row.tip}.png"></td><td class = "${t_row.color}">${t_row.Title}</td><td>${t_row.Number}</td><td>${t_row.Organizer}</td><td>${t_row.Data}</td></tr>`)
-                    })}
+                        u("#bookList").append(`<tr><td><img src="${t_row.tip}.png"></td><td class = "${t_row.color}">${t_row.Title}</td><td>${t_row.Number}</td><td>${t_row.Organizer}</td><td>${t_row.Data}</td><td py-0><button type="button" class="btn btn-danger btn-sm py-0 my-0"><i class="bi bi-trash3" data-id="${t_row.Id}"></i></button></td></tr>`)
+                    })
+                    u("[data-id]").on('click', deleteOBTP)
+                } else {
+                    u("#bookList").append ('<tr><td></td><td colspan="5"><i>No more meetings found for this device</i></td></tr>')
+                }
             }
             function clearOBTP() {
                 const deviceId = u("#devices").first().value;
@@ -132,12 +147,12 @@
 
                     if (bookingList.data.result.ResultInfo.TotalRows) {
                     allBookings = await Promise.all(
-                        bookingList.data.result.Booking.map(async item => {
+                        bookingList.data.result.Booking.map(async (item, index) => {
                             try {
                                 const get_res = await axios.post("https://webexapis.com/v1/xapi/command/Bookings.Get", { deviceId, arguments: {Id: item.Id}}, {headers})
                                 const booking = get_res.data.result.Booking
                                 return {
-                                    Id: booking.Id,
+                                    Id: (index + 1).toString(),
                                     Title: booking.Title,
                                     Number : booking.DialInfo.Calls.Call[0].Number,
                                     Protocol: booking.DialInfo.Calls.Call[0].Protocol,
@@ -383,6 +398,7 @@
                     <th scope="col">Numar</th>
                     <th scope="col">Organizator</th>
                     <th scope="col">Data/Ora</th>
+                    <th scope="cpl">*</th>
                 </tr>
             </thead>
             <tbody class="table-group-divider" id="bookList"></tbody>
@@ -392,7 +408,7 @@
         <div id="infoToast" class="toast" data-bs-delay="10000">
             <div class="toast-header text-bg-success" data-bs-theme="dark">
                 <i class="bi bi-check2-square me-3"></i>
-                <strong class="me-auto">OBTP Push v2</strong>
+                <strong class="me-auto">OBTP Push v0.2</strong>
                 <button type="button" class="btn-close" data-bs-dismiss="toast"></button>
             </div>
             <div class="toast-body" id="toastBody">Meetings updated succesfully</div>

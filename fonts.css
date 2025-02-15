@@ -7,3 +7,22 @@
   
 body { font-family: 'CiscoSansTT Regular', sans-serif !important;}
 .card-title { font-family: 'CiscoSansTT Bold', sans-serif !important; }
+
+body {
+    background-image: url('img/background.jpg');
+    background-repeat: no-repeat;
+    background-size: cover;
+    background-attachment: fixed;
+}
+th {
+    color: white !important;
+    background-color: rgb(108, 117, 125) !important;
+}
+.teams-btn {
+    background-color: #6610f2;
+    color: #fff;
+}
+
+.teams-text {
+    color: #6610f2 !important;
+}

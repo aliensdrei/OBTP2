@@ -99,7 +99,7 @@
                                 t_row.color = "text-primary"
                                 t_row.Number = booking.Number    
                         }
-                        u("#bookList").append(`<tr><td><img src="${t_row.tip}.png"></td><td class = "${t_row.color}">${t_row.Title}</td><td>${t_row.Number}</td><td>${t_row.Organizer}</td><td>${t_row.Data}</td><td py-0><button type="button" class="btn btn-danger btn-sm py-0 my-0"><i class="bi bi-trash3" data-id="${t_row.Id}"></i></button></td></tr>`)
+                        u("#bookList").append(`<tr><td><img src="../img/${t_row.tip}.svg" height="22"></td><td class = "${t_row.color} fw-bold">${t_row.Title}</td><td>${t_row.Number}</td><td>${t_row.Organizer}</td><td>${t_row.Data}</td><td py-0><button type="button" class="btn btn-danger btn-sm py-0 my-0"><i class="bi bi-trash3" data-id="${t_row.Id}"></i></button></td></tr>`)
                     })
                     u("[data-id]").on('click', deleteOBTP)
                 } else {
@@ -283,25 +283,25 @@
                 <li class="nav-item">
                     <button class="nav-link active text-primary" data-bs-toggle="tab" data-bs-target="#sip-tab-pane"
                         type="button">
-                        SIP
+                        <img src="../img/cisco.svg" height="20" class="me-2"><strong>SIP</strong>
                     </button>
                 </li>
                 <li class="nav-item">
                     <button class="nav-link teams-text" data-bs-toggle="tab" data-bs-target="#teams-tab-pane"
                         type="button">
-                        Teams(ID)
+                        <img src="../img/teams.svg" height="20" class="me-2"><strong>Teams</strong>(ID)
                     </button>
                 </li>
                 <li class="nav-item">
                     <button class="nav-link text-success" data-bs-toggle="tab" data-bs-target="#webex-tab-pane"
                         type="button">
-                        Webex
+                        <img src="../img/webex.svg" height="20" class="me-2"><strong>Webex</strong>
                     </button>
                 </li>
                 <li class="nav-item">
                     <button class="nav-link teams-text" data-bs-toggle="tab" data-bs-target="#link-tab-pane"
                         type="button">
-                        Teams(Link)
+                        <img src="../img/teams.svg" height="20" class="me-2"><strong>Teams</strong>(Link)
                     </button>
                 </li>
             </ul>
@@ -349,9 +349,9 @@
 
             <div class="mb-3">
                 <div class="input-group mb-3">
-                    <span class="input-group-text">Data/Ora:</span>
+                    <span class="input-group-text"><i class="bi bi-clock me-2"></i>Data/Ora:</span>
                     <input type="datetime-local" class="form-control" id="mtg_date" />
-                    <span class="input-group-text">Durata:</span>
+                    <span class="input-group-text text"><i class="bi bi-stopwatch me-2"></i>Durata:</span>
                     <select class="form-select" id="durata">
                         <option value="30">30m</option>
                         <option selected value="60">1h</option>
@@ -362,10 +362,16 @@
                     </select>
                 </div>
                 <div class="input-group mb-3">
-                    <span class="input-group-text">Titlu:</span>
-                    <input class="form-control" type="text" id="titlu" />
-                    <span class="input-group-text">Organizator:</span>
-                    <input class="form-control" type="text" id="organizer" />
+                    <span class="input-group-text"><i class="bi bi-textarea-t me-2"></i></span>
+                    <div class="form-floating">
+                        <input class="form-control" type="text" id="titlu" type="text" placeholder="Titlu"/>
+                        <label for="titlu">Titlu</label>
+                    </div>
+                    <span class="input-group-text"><i class="bi bi-person-vcard me-2"></i></span>
+                    <div class="form-floating">
+                        <input class="form-control" type="text" id="organizer" type="text" placeholder="Organizator"/>
+                        <label for="organizer">Organizator</label>
+                    </div>
                 </div>
             </div>
         </div>
